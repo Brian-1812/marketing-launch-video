@@ -1,0 +1,12 @@
+{
+  "name": "marketing-launch-video",
+  "version": "0.1.0",
+  "description": "Produce a professional animated launch video for a software product from nothing but a URL. Browses the product, triages which screens carry the story, rebuilds the UI as frame-driven React in Remotion rather than screen-recording it, and choreographs camera, typography and sound into a 30-60 second cut. Renders real .glb meshes through three.js when the product outputs 3D.",
+  "author": {
+    "name": "Brian",
+    "url": "https://github.com/Brian-1812"
+  },
+  "homepage": "https://github.com/Brian-1812/marketing-launch-video",
+  "license": "MIT",
+  "keywords": ["video", "marketing", "remotion", "launch", "demo", "animation", "product"]
+}
