@@ -17,9 +17,11 @@ Something like:
 Everything else is silence, and the silence is doing work. If a sound isn't
 marking a moment you want the viewer to remember, cut it.
 
-**Ask before adding music.** Many people want to drop their own bed. Build the
-effects track to sit under one: leave 80–300 Hz effectively empty (that's
-where a kick and bass live) and leave 6–10 dB of headroom.
+**Ask before adding music** — see `music.md`, which covers sourcing a bed,
+choosing a mood, and aligning its arrangement to your cuts. Many people want
+to drop their own track. Either way, build the effects track to sit under one:
+leave 80–300 Hz effectively empty (that's where a kick and bass live) and
+leave 6–10 dB of headroom. Effects peak ~0.62, music peak ~0.30.
 
 ---
 

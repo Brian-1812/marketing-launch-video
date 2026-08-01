@@ -36,9 +36,35 @@ looks better than any capture.
 - A standalone Remotion project (its own git repo — it never touches your
   product's source)
 - A rendered MP4
-- A synthesized sound-effects track, no samples or licensing
-- An honest list of what couldn't be verified, and any bugs found in your
-  product along the way
+- A synthesized sound-effects track and a music bed, no samples or licensing
+- An honest list of what couldn't be verified, what was inferred rather than
+  observed, and any bugs found in your product along the way
+
+## If your product is behind a login
+
+It still works. Given credentials or a local dev server it builds the good
+version — one user, one job, one artifact. Without either, it doesn't fake a
+session it never saw: it switches to a **chaptered feature film** built from
+your landing page's own feature cards, copy, icons and components, so the
+video and the site look like one system. Then it tells you exactly which
+screens were reconstructed rather than observed.
+
+## Music
+
+Ask for a feel and it synthesizes a bed whose arrangement lands on your cuts:
+
+```
+/marketing-launch-video https://your-product.com — make the music energetic
+```
+
+Six moods — `energetic`, `soft`, `cinematic`, `minimal`, `warm`, `tense` —
+each with its own tempo, key, instrumentation and drum treatment. Sections
+enter on your shot boundaries, one riser hits your biggest cut, and the bed
+ducks under any line you want read rather than felt.
+
+It asks whether you already have a track first, because most people do and
+theirs will be better. Swapping later is one file: drop any WAV or MP3 at
+`public/music.wav` and re-render.
 
 ## Install
 
@@ -80,16 +106,20 @@ needs one. It's flagged here so nobody finds out after shipping a launch.
 skills/marketing-launch-video/
 ├── SKILL.md                  the workflow Claude follows
 ├── references/
-│   ├── discovery.md          browsing a URL, triaging pages, the credentials conversation
+│   ├── discovery.md          browsing a URL, triaging pages, credentials, gated products
+│   ├── structure.md          one story vs three chapters, card design, writing labels
 │   ├── camera.md             layout space, the focus-point camera, cut vs push vs morph
 │   ├── motion.md             durations, typography, hook patterns
 │   ├── sound.md              pop / swish / whoosh, restraint, synthesizing keyboard
+│   ├── music.md              sourcing vs synthesizing, moods, aligning sections to cuts
 │   └── pitfalls.md           bugs that cost real hours, each with the fix
 ├── scripts/
 │   ├── scaffold_video.py     creates the Remotion project with working version pins
-│   └── make_sfx.py           synthesizes an SFX track from a JSON event list
+│   ├── make_sfx.py           synthesizes an SFX track from a JSON event list
+│   └── make_music.py         synthesizes a music bed aligned to the cut
 └── assets/
-    └── useCamera.ts          the focus-point camera hook
+    ├── useCamera.ts          the focus-point camera hook
+    └── ChapterCard.tsx       the chapter card for the chaptered shape
 ```
 
 ## A few things it knows that are easy to get wrong
@@ -114,6 +144,15 @@ cut feel designed.
 **Four sounds is usually plenty.** Scoring every beat produces wall-to-wall
 noise. A pop means a thing appeared, a swish means an element moved inside the
 shot, a whoosh means the *shot* moved. Most videos need three.
+
+**Don't chapter a sequence.** If a product's capabilities happen one after
+another in a single session, that's one workflow, not three features —
+labelling it as three fights the material. The fix is usually to keep the
+single narrative and put the labels *over* the action.
+
+**Reverb is what separates "programmed" from "produced".** Dry oscillators sit
+flat at the front of the image with no apparent space; the same notes through
+even a crude synthesized room read as a recording of something.
 
 `references/pitfalls.md` has the rest.
 

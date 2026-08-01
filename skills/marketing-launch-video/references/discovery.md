@@ -93,10 +93,9 @@ and a tour. Every screen you add costs seconds you don't have.
 
 ## When the good part is behind auth
 
-This is common and it is a hard blocker — do not work around it by building
-the video out of the marketing site.
+Common, and it changes what film you can make. Ask first, then fall back.
 
-Stop and ask, offering both paths:
+**Ask, offering both paths:**
 
 > The core of the product is behind a login, so I can't see the screen the
 > video needs to be about. Two options: give me test credentials for a demo
@@ -114,9 +113,103 @@ If they offer local dev:
   dev database, not staging or production.
 - Prefer any existing demo/mock mode over creating data.
 
-If they decline both: say clearly that the video will be limited to what the
-public site shows, and that this usually makes a weaker video, then ask
-whether they'd rather wait until they can share access.
+**If neither is available, you can still make a good video** — but a different
+one. Say so plainly, then take the path below.
+
+---
+
+## Building from a gated product's landing page
+
+You cannot follow one user through one session, because you can't see the
+session. So don't fake it: switch from the single-narrative shape to the
+chaptered feature shape (`structure.md`, Shape B). The landing page is
+*designed* to enumerate features, which is exactly what that shape needs.
+
+Tell the user what you're doing and why, in one sentence, so the structural
+change isn't a surprise at delivery.
+
+### 1. Harvest the feature set
+
+The feature cards are the company's own answer to "what does this do", already
+approved and already prioritised by position on the page. Take them at face
+value, then cut to three (see `structure.md` for how to order).
+
+```js
+// via javascript_tool / browser_evaluate — find the repeated-structure blocks
+// that constitute a feature grid, rather than guessing at selectors.
+const groups = {};
+document.querySelectorAll("section, div[class*=grid], ul").forEach(c => {
+  const kids = [...c.children];
+  if (kids.length < 2 || kids.length > 8) return;
+  const sig = kids.map(k => k.className).join("|");
+  if (new Set(kids.map(k => k.className)).size === 1 && kids[0].innerText.trim())
+    groups[sig] = kids.map(k => ({
+      html: k.outerHTML,
+      text: k.innerText.trim(),
+      cls: k.className,
+      rect: k.getBoundingClientRect(),
+    }));
+});
+groups;
+```
+
+For each card capture: the **heading**, the **body copy**, the **icon** (its
+SVG path — grab the actual markup, not a description), and the card's computed
+styles. That's your chapter labels, already written in the company's voice.
+
+Also worth harvesting: the hero headline and subhead (that's the one-sentence
+positioning), any numbers or logos they cite, and the exact CTA wording for the
+end slate.
+
+### 2. Reuse the actual components
+
+This is the part people skip, and it's the difference between a video that
+looks like the product and a video that looks like a template.
+
+The landing page's own feature cards, badges, buttons, pills, tabs, code
+blocks and chrome are **real, shipped, on-brand components that you can see the
+markup for**. Vendor them the same way you'd vendor an app component: copy the
+real class names, bring the CSS custom properties across, keep the exact radii
+and shadows.
+
+Then use them as the film's vocabulary — the chapter card's accent rule, the
+end slate's button, the labels on a diagram — so the video and the site look
+like one system. When the viewer lands on the site after the video, it should
+feel like the same place.
+
+### 3. Reconstruct the interaction each feature describes
+
+A feature card says what happens; your job is to show it. Reconstruct the
+screen from whatever evidence exists, in this order of preference:
+
+1. **Product screenshots on the landing page** — often the real UI at full
+   fidelity. Read the layout off them directly.
+2. **A demo video or animated preview on the site.** If they have one, watch
+   it: it's the company showing you the money shot, and you can pull the
+   layout, the copy and the flow straight out of it.
+3. **Docs and help-centre screenshots.** Usually the most complete source, and
+   frequently public even when the app isn't.
+4. **A public sandbox, playground, or free tier** that doesn't require the
+   gated plan.
+5. **App-store or Product Hunt listings**, changelog posts, launch threads.
+
+**Where you have to infer, keep it generic and say so.** A plausible-looking
+made-up screen is a real risk here: you may show a button that doesn't exist,
+or imply a workflow the product doesn't support. Prefer showing less at higher
+confidence — a tight crop on one panel you have evidence for beats a full
+screen you invented.
+
+### 4. Say what you inferred
+
+At handover, list every screen that was reconstructed rather than observed, and
+offer to redo those beats if they'll share access. Frame it as a question they
+can answer in a minute:
+
+> Chapters 2 and 3 are reconstructed from your docs screenshots — I never saw
+> the live editor. Worth a look before you post it; if anything's wrong I can
+> fix it in an hour, or in ten minutes if you can get me into a demo account.
+
+Nobody minds inference that's declared. Everybody minds finding it themselves.
 
 ---
 

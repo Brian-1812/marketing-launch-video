@@ -47,6 +47,16 @@ def main() -> None:
                          "120 BPM = 30 frames, 90 = 40, 150 = 24.")
     ap.add_argument("--width", type=int, default=1920)
     ap.add_argument("--height", type=int, default=1080)
+    ap.add_argument("--shape", choices=("narrative", "chapters"),
+                    default="narrative",
+                    help="narrative = one user, one job, one artifact (default). "
+                         "chapters = three labelled features, for gated products "
+                         "or genuinely separate capabilities.")
+    ap.add_argument("--mood", default="minimal",
+                    choices=("energetic", "soft", "cinematic", "minimal",
+                             "warm", "tense"),
+                    help="Seeds music.spec.json. ASK the user first — many "
+                         "have their own track.")
     ap.add_argument("--no-git", action="store_true")
     a = ap.parse_args()
 
@@ -166,6 +176,56 @@ export default {
 }
 """)
 
+    # Lay the shots out across however many bars the requested duration
+    # actually gives, rather than a fixed table that leaves the tail empty.
+    bar = beat * 4
+    total_bars = max(6, frames // bar)
+
+    if a.shape == "chapters":
+        weights = [("hook", 2), ("chapter1", 3), ("chapter2", 3),
+                   ("chapter3", 3), ("slate", 2)]
+    else:
+        weights = [("hook", 2), ("ask", 3), ("work", 4),
+                   ("artifact", 4), ("control", 3), ("slate", 2)]
+
+    unit = sum(w for _, w in weights)
+    bars, used = [], 0
+    for i, (name, wgt) in enumerate(weights):
+        b = (total_bars - used if i == len(weights) - 1
+             else max(1, round(wgt / unit * total_bars)))
+        bars.append((name, b))
+        used += b
+
+    lines, at = [], 0
+    # The card is 9 beats (~4.5s at 120 BPM) — long enough to read a heading
+    # and a one-line summary, short enough not to stall the film. See
+    # references/structure.md.
+    CARD = 9
+    for name, b in bars:
+        if a.shape == "chapters" and name.startswith("chapter"):
+            n = name[-1]
+            lines.append((f"card{n}", f"BAR * {at}", f"BEAT * {CARD}"))
+            lines.append((f"feature{n}", f"BAR * {at} + BEAT * {CARD}",
+                          f"BAR * {b} - BEAT * {CARD}"))
+        else:
+            # The last shot absorbs any frames left over by the bar rounding,
+            # so the film never ends on a second of nothing.
+            dur = (f"DURATION - BAR * {at}" if name == weights[-1][0]
+                   else f"BAR * {b}")
+            lines.append((name, f"BAR * {at}" if at else "0", dur))
+        at += b
+
+    kw = max(len(n) for n, _, _ in lines) + 1
+    fw = max(len(f) for _, f, _ in lines) + 1
+    shots = "".join(
+        f"  {(n + ':').ljust(kw)} {{ from: {(f + ',').ljust(fw)} "
+        f"duration: {d} }},\n" for n, f, d in lines)
+
+    # Music sections land on the same frames as the shots above.
+    section_at = {n: at_ * bar for (n, at_) in
+                  zip([n for n, _ in bars],
+                      [sum(b for _, b in bars[:i]) for i in range(len(bars))])}
+
     w(root / "src/timeline.ts", f"""
 /**
  * Frame math and shot boundaries.
@@ -188,13 +248,7 @@ export const DURATION = {frames};
 
 /** Shot boundaries. Keep each `from` on a multiple of BEAT. */
 export const SHOTS = {{
-  hook:     {{ from: 0,   duration: BAR * 2 }},
-  ask:      {{ from: BAR * 2, duration: BAR * 3 }},
-  work:     {{ from: BAR * 5, duration: BAR * 4 }},
-  artifact: {{ from: BAR * 9, duration: BAR * 4 }},
-  control:  {{ from: BAR * 13, duration: BAR * 3 }},
-  slate:    {{ from: BAR * 16, duration: BAR * 2 }},
-}} as const;
+{shots}}} as const;
 """)
 
     w(root / "src/Root.tsx", f"""
@@ -262,7 +316,17 @@ export function Main({ withAudio = true }: { withAudio?: boolean }) {
   return (
     <AbsoluteFill className="bg-background font-sans">
       {/* Scenes go here, layered: product underneath, title cards on top. */}
-      {withAudio ? <Audio src={staticFile("sfx.wav")} /> : null}
+
+      {/* Two tracks, two files, so either can be replaced without
+          regenerating the other. Music at peak ~0.30 and effects at ~0.62
+          (set when synthesizing); the bed should be quiet enough that you
+          notice it only when it stops. */}
+      {withAudio ? (
+        <>
+          <Audio src={staticFile("music.wav")} volume={0.85} />
+          <Audio src={staticFile("sfx.wav")} />
+        </>
+      ) : null}
     </AbsoluteFill>
   );
 }
@@ -284,9 +348,10 @@ export function cn(...inputs: ClassValue[]) {
 }
 """)
 
-    cam = ASSETS / "useCamera.ts"
-    if cam.exists():
-        shutil.copy(cam, root / "src/hooks/useCamera.ts")
+    for src, dst in (("useCamera.ts", "src/hooks/useCamera.ts"),
+                     ("ChapterCard.tsx", "src/components/ChapterCard.tsx")):
+        if (ASSETS / src).exists():
+            shutil.copy(ASSETS / src, root / dst)
 
     w(root / "sfx.spec.json", json.dumps({
         "fps": a.fps, "duration_frames": frames, "peak": 0.62,
@@ -295,6 +360,43 @@ export function cn(...inputs: ClassValue[]) {
             {"type": "typing", "from": beat * 8, "to": beat * 14, "text": "the typed line"},
             {"type": "click", "at": beat * 16},
         ],
+    }, indent=2) + "\n")
+
+    # Music arrangement, on the same frames as the shot boundaries above.
+    # Layers entering is how the film gains momentum; strip back to pad for
+    # the slate.
+    if a.shape == "chapters":
+        sections = [
+            {"at": 0, "name": "intro", "layers": ["pad", "sub"]},
+            {"at": section_at["chapter1"], "name": "build",
+             "layers": ["pad", "sub", "bass", "pluck"]},
+            {"at": section_at["chapter2"], "name": "main",
+             "layers": ["pad", "bass", "kick", "hat", "pluck"]},
+            {"at": section_at["slate"], "name": "outro",
+             "layers": ["pad", "bell"]},
+        ]
+        hits = [{"at": section_at["chapter1"], "riser": True}]
+    else:
+        sections = [
+            {"at": 0, "name": "intro", "layers": ["pad", "sub"]},
+            {"at": section_at["ask"], "name": "build",
+             "layers": ["pad", "sub", "bass", "pluck"]},
+            {"at": section_at["work"], "name": "main",
+             "layers": ["pad", "bass", "kick", "hat", "pluck", "clap"]},
+            {"at": section_at["slate"], "name": "outro",
+             "layers": ["pad", "bell"]},
+        ]
+        hits = [{"at": section_at["artifact"], "riser": True}]
+
+    w(root / "music.spec.json", json.dumps({
+        "fps": a.fps, "duration_frames": frames, "bpm": a.bpm,
+        "mood": a.mood, "peak": 0.30,
+        "_comment": "ASK the user before synthesizing — many have their own "
+                    "track. Section `at` values are FRAMES and should sit on "
+                    "real shot boundaries. See references/music.md.",
+        "sections": sections,
+        "hits": hits,
+        "ducks": [],
     }, indent=2) + "\n")
 
     w(root / ".gitignore", "node_modules/\nout/\n.remotion/\npublic/*.wav\n*.log\n.DS_Store\n")
@@ -306,27 +408,34 @@ Launch video. Standalone — does not modify the product's repo.
 
 ```bash
 npm install
-python3 <skill-dir>/scripts/make_sfx.py sfx.spec.json public/sfx.wav
+python3 <skill-dir>/scripts/make_sfx.py   sfx.spec.json   public/sfx.wav
+python3 <skill-dir>/scripts/make_music.py music.spec.json public/music.wav
 npm run studio          # scrub at localhost:3000
 npx remotion still MainSilent out/f0300.png --frame=300   # LOOK at this before rendering
 npm run render
 ```
 
 {a.fps} fps, {a.bpm} BPM (beat = {beat} frames), {frames} frames = {a.seconds:.1f}s.
+Shape: **{a.shape}**. Music mood: **{a.mood}**.
 
 The app is laid out at {a.width}x{a.height} whatever the output resolution; the
 camera is a transform on that layout. See `src/hooks/useCamera.ts`.
+
+To swap the music for a real track, drop any WAV or MP3 at `public/music.wav`
+and re-render. Nothing else changes.
 """)
 
     if not a.no_git and not (root / ".git").exists():
         subprocess.run(["git", "init", "-q"], cwd=root, check=False)
 
     print(f"scaffolded {root}")
-    print(f"  {a.fps}fps, {a.bpm} BPM (beat={beat}f), {frames} frames ({a.seconds:.1f}s)")
+    print(f"  {a.fps}fps, {a.bpm} BPM (beat={beat}f), {frames} frames "
+          f"({a.seconds:.1f}s), shape={a.shape}, mood={a.mood}")
     print("\nnext:")
     print(f"  cd {root} && npm install")
     print("  - vendor the product's tailwind.config + theme CSS")
     print("  - fill in src/timeline.ts and src/data/")
+    print("  - ASK whether they have a music track before synthesizing one")
     print("  - render a still and look at it before rendering the film")
 
 
